@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { componentsEqual, getSniffedDuration, maybeCall, raf } from './utils'
+import { componentsEqual, maybeCall, onAllTransitionsEnd, raf } from './utils'
 
 class TransitionWrapper extends React.Component {
     render() {
@@ -45,21 +45,23 @@ export interface TransitionProps
 export interface TransitionState {
     child: React.ReactElement<{}>
     isEntering: boolean
+    isLeaving: boolean
 }
 
 type EnterOrLeave = 'enter' | 'leave'
 
 export default class Transition extends React.Component<TransitionProps, TransitionState> {
     _childRef: React.ReactInstance
-    _timeouts = {
-        appear: null as number,
-        enter: null as number,
-        leave: null as number
+    _timeoutClears = {
+        appear: null as Function,
+        enter: null as Function,
+        leave: null as Function
     }
 
     state: TransitionState = {
         child: this.child,
-        isEntering: false
+        isEntering: false,
+        isLeaving: false
     }
 
     componentDidMount() {
@@ -72,7 +74,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
                 raf(() => {
                     // new element is now entering, wait for after-appear
                     const doneCallback = () => {
-                        this._timeouts.appear = null
+                        this._timeoutClears.appear = null
                         this._applyPostAnimationClasses('enter')
                         maybeCall(this.props.onAfterAppear, this.childRef)
                     }
@@ -83,7 +85,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
                     } else {
                         this._applyActiveTransitionClasses('enter')
                         maybeCall(this.props.onAppear, this.childRef)
-                        this._setTimeout('appear', doneCallback, this.timeoutDuration)
+                        this._onTransitionsEnd('appear', doneCallback)
                     }
                 })
             })
@@ -93,8 +95,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
     componentWillReceiveProps(nextProps: Readonly<TransitionProps>) {
         // React will not attempt to replace elements
         // render the child with the new props
-        if (componentsEqual(this.props.children, nextProps.children)) {
-            this._clearTimeouts()
+        if (componentsEqual(this.props.children, nextProps.children) && !this.state.isLeaving) {
             this.setState({
                 child: React.Children.only(nextProps.children)
             })
@@ -102,18 +103,18 @@ export default class Transition extends React.Component<TransitionProps, Transit
     }
 
     componentDidUpdate(prevProps: Readonly<TransitionProps>) {
-        if (this.state.isEntering) {
+        function startEnterCallback(this: Transition) {
             maybeCall(this.props.onBeforeEnter, this.childRef)
             this._applyInitialTransitionClasses('enter')
 
             raf(() => {
                 raf(() => {
                     const doneCallback = () => {
-                        this._timeouts.enter = null
+                        this._timeoutClears.enter = null
+                        this._applyPostAnimationClasses('enter')
                         this.setState({
                             isEntering: false
                         })
-                        this._applyPostAnimationClasses('enter')
                         maybeCall(this.props.onAfterEnter, this.childRef)
                     }
 
@@ -123,41 +124,47 @@ export default class Transition extends React.Component<TransitionProps, Transit
                     } else {
                         maybeCall(this.props.onEnter, this.childRef)
                         this._applyActiveTransitionClasses('enter')
-                        this._setTimeout('enter', doneCallback, this.timeoutDuration)
+                        this._onTransitionsEnd('enter', doneCallback)
                     }
                 })
             })
-        } else {
-            // children have changed, React is going to replace elements
-            // transition the element out
-            if (!componentsEqual(this.props.children, prevProps.children)) {
-                maybeCall(this.props.onBeforeLeave, this.childRef)
-                this._applyInitialTransitionClasses('leave')
+        }
+        // children have changed, React is going to replace elements
+        // transition the element out
+        if (!componentsEqual(this.props.children, prevProps.children)) {
+            maybeCall(this.props.onBeforeLeave, this.childRef)
+            this._applyInitialTransitionClasses('leave')
+            this.setState({
+                isLeaving: true
+            })
 
+            raf(() => {
                 raf(() => {
-                    raf(() => {
-                        const doneCallback = () => {
-                            this._timeouts.leave = null
-                            const prevRef = this.childRef
-                            this._applyPostAnimationClasses('leave')
-                            maybeCall(this.props.onAfterLeave, prevRef)
-                            this.setState({
+                    const doneCallback = () => {
+                        this._timeoutClears.leave = null
+                        const prevRef = this.childRef
+                        this._applyPostAnimationClasses('leave')
+                        maybeCall(this.props.onAfterLeave, prevRef)
+                        this.setState(
+                            {
                                 child: this.child,
-                                isEntering: true
-                            })
-                        }
+                                isEntering: true,
+                                isLeaving: false
+                            },
+                            startEnterCallback
+                        )
+                    }
 
-                        if (this.props.onLeave && this.props.onLeave.length >= 2) {
-                            this.props.onLeave(this.childRef, doneCallback)
-                            this._applyActiveTransitionClasses('leave')
-                        } else {
-                            maybeCall(this.props.onLeave, this.childRef)
-                            this._applyActiveTransitionClasses('leave')
-                            this._setTimeout('leave', doneCallback, this.timeoutDuration)
-                        }
-                    })
+                    if (this.props.onLeave && this.props.onLeave.length >= 2) {
+                        this.props.onLeave(this.childRef, doneCallback)
+                        this._applyActiveTransitionClasses('leave')
+                    } else {
+                        maybeCall(this.props.onLeave, this.childRef)
+                        this._applyActiveTransitionClasses('leave')
+                        this._onTransitionsEnd('leave', doneCallback)
+                    }
                 })
-            }
+            })
         }
     }
 
@@ -182,31 +189,32 @@ export default class Transition extends React.Component<TransitionProps, Transit
         return `${prefix}`
     }
 
-    get timeoutDuration() {
-        return this.props.duration || getSniffedDuration(this.props.type, this.childRef)
-    }
-
     _setRef = (ref: React.ReactInstance) => {
         this._childRef = ref
     }
 
     _clearTimeouts() {
-        if (this._timeouts.appear) {
-            clearTimeout(this._timeouts.appear)
+        if (this._timeoutClears.appear) {
+            this._timeoutClears.appear()
             maybeCall(this.props.onCancelAppear, this.childRef)
         }
-        if (this._timeouts.enter) {
-            clearTimeout(this._timeouts.enter)
+        if (this._timeoutClears.enter) {
+            this._timeoutClears.enter()
             maybeCall(this.props.onCancelEnter, this.childRef)
         }
-        if (this._timeouts.leave) {
-            clearTimeout(this._timeouts.leave)
+        if (this._timeoutClears.leave) {
+            this._timeoutClears.leave()
             maybeCall(this.props.onCancelLeave, this.childRef)
         }
     }
 
-    _setTimeout(type: 'appear' | EnterOrLeave, callback: () => any, duration: number) {
-        this._timeouts[type] = window.setTimeout(callback, duration)
+    _onTransitionsEnd(type: 'appear' | EnterOrLeave, callback: Function) {
+        if (this.props.duration) {
+            let timeout = window.setTimeout(callback, this.props.duration)
+            this._timeoutClears[type] = () => window.clearTimeout(timeout)
+        } else {
+            this._timeoutClears[type] = onAllTransitionsEnd(this.props.type, this.childRef, callback)
+        }
     }
 
     _getInitialClass(type: EnterOrLeave) {

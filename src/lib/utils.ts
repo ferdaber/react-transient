@@ -42,3 +42,34 @@ export function getSniffedDuration(type: 'animation' | 'transition', el: HTMLEle
         ? maxAnimationDuration
         : type === 'transition' ? maxTransitionDuration : Math.max(maxAnimationDuration, maxTransitionDuration)
 }
+
+export function onAllTransitionsEnd(type: 'animation' | 'transition', el: HTMLElement, callback: Function) {
+    const { animationDuration, animationDelay, transitionDuration, transitionDelay } = getComputedStyle(el)
+    type =
+        type ||
+        (totalTransitionDuration(animationDuration, animationDelay) >
+        totalTransitionDuration(transitionDuration, transitionDelay)
+            ? 'animation'
+            : 'transition')
+    const totalNumTransitionEnds =
+        type === 'animation' ? animationDuration.split(',').length : transitionDuration.split(',').length
+    const eventType = `${type}end`
+
+    let numTransitionEnds = 0
+    let timeout: number
+    function doneCallback() {
+        window.clearTimeout(timeout)
+        el.removeEventListener(eventType, onAnimationEnd)
+        callback()
+    }
+    function onAnimationEnd(event: AnimationEvent) {
+        event.target === el && ++numTransitionEnds >= totalNumTransitionEnds && doneCallback()
+    }
+    timeout = window.setTimeout(doneCallback, getSniffedDuration(type, el))
+    el.addEventListener(eventType, onAnimationEnd)
+
+    return function clearTimeouts() {
+        window.clearTimeout(timeout)
+        el.removeEventListener(eventType, onAnimationEnd)
+    }
+}
