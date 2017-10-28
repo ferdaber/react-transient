@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { componentsEqual, maybeCall, onAllTransitionsEnd, raf } from './utils'
+import { onAllTransitionsEnd } from './transition-utils'
+import { componentsEqual, maybeCall, raf } from './utils'
 
 class TransitionWrapper extends React.Component {
     render() {
@@ -78,8 +79,9 @@ export default class Transition extends React.Component<TransitionProps, Transit
                         this._applyPostAnimationClasses('enter')
                         maybeCall(this.props.onAfterAppear, this.childRef)
                     }
+                    // order of priority:
+                    // explicitly defined done callback > props.duration defined > autoCss sniffing
                     if (this.props.onAppear && this.props.onAppear.length >= 2) {
-                        // if there is done callback expected, call onAfterAppear right away
                         this._applyActiveTransitionClasses('enter')
                         this.props.onAppear(this.childRef, doneCallback)
                     } else {
