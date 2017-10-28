@@ -36,36 +36,42 @@
     transform: translateY(-100px);
 } */
 
+.block-enter {
+    opacity: 0;
+}
+
 .block-entering {
-    animation-name: slidein;
-    animation-duration: 2s;
+    transform: translateX(-100px);
+    animation: 1s linear 1s slidein;
+    transition: opacity 1s linear;
 }
 
 .block-leaving {
-    animation-name: slideout;
-    animation-duration: 2s;
+    animation: 1s linear slideout;
+    transition: opacity 1s linear 1s;
+}
+
+.block-leave-to {
+    opacity: 0;
+    transform: translateX(100px);
 }
 
 @keyframes slidein {
     from {
         transform: translateX(-100px);
-        opacity: 0;
     }
 
     to {
         transform: translateX(0);
-        opacity: 1;
     }
 }
 
 @keyframes slideout {
     from {
         transform: translateX(0);
-        opacity: 1;
     }
 
     to {
         transform: translateX(100px);
-        opacity: 0;
     }
 }

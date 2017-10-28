@@ -19,7 +19,7 @@ function getSniffedCssInfo(type: 'animation' | 'transition', el: HTMLElement) {
     }
     maxDurations.animation = totalTransitionDuration(animationDuration, animationDelay)
     maxDurations.transition = totalTransitionDuration(transitionDuration, transitionDelay)
-    const maxType = maxDurations.transition > maxDurations.transition ? 'transition' : 'animation'
+    const maxType = maxDurations.transition > maxDurations.animation ? 'transition' : 'animation'
     return type
         ? {
               type,
