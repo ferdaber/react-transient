@@ -1,11 +1,11 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import { onAllTransitionsEnd } from './transition-utils'
-import { componentsEqual, maybeCall, raf } from './utils'
+import { componentsEqual, maybeCall, noop, onNextFrame } from './utils'
 
 class TransitionWrapper extends React.Component {
     render() {
-        return React.Children.only(this.props.children)
+        return this.props.children as React.ReactElement<{}> | React.ReactElement<{}>[]
     }
 }
 
@@ -45,6 +45,7 @@ export interface TransitionProps
 
 export interface TransitionState {
     child: React.ReactElement<{}>
+    oldChild: React.ReactElement<{}>
     isEntering: boolean
     isLeaving: boolean
 }
@@ -53,6 +54,7 @@ type EnterOrLeave = 'enter' | 'leave'
 
 export default class Transition extends React.Component<TransitionProps, TransitionState> {
     _childRef: React.ReactInstance
+    _oldChildRef: React.ReactInstance
     _timeoutClears = {
         appear: null as Function,
         enter: null as Function,
@@ -60,7 +62,8 @@ export default class Transition extends React.Component<TransitionProps, Transit
     }
 
     state: TransitionState = {
-        child: this.child,
+        child: this._getChild(this.props),
+        oldChild: null,
         isEntering: false,
         isLeaving: false
     }
@@ -68,28 +71,26 @@ export default class Transition extends React.Component<TransitionProps, Transit
     componentDidMount() {
         if (this.props.appear) {
             // set up new element to enter before next frame
+            this._applyInitialTransitionClasses('enter', this.childRef)
             maybeCall(this.props.onBeforeAppear, this.childRef)
-            this._applyInitialTransitionClasses('enter')
 
-            raf(() => {
-                raf(() => {
-                    // new element is now entering, wait for after-appear
-                    const doneCallback = () => {
-                        this._timeoutClears.appear = null
-                        this._applyPostAnimationClasses('enter')
-                        maybeCall(this.props.onAfterAppear, this.childRef)
-                    }
-                    // order of priority:
-                    // explicitly defined done callback > props.duration defined > autoCss sniffing
-                    if (this.props.onAppear && this.props.onAppear.length >= 2) {
-                        this._applyActiveTransitionClasses('enter')
-                        this.props.onAppear(this.childRef, doneCallback)
-                    } else {
-                        this._applyActiveTransitionClasses('enter')
-                        maybeCall(this.props.onAppear, this.childRef)
-                        this._onTransitionsEnd('appear', doneCallback)
-                    }
-                })
+            onNextFrame(() => {
+                // new element is now entering, wait for after-appear
+                const doneCallback = () => {
+                    this._timeoutClears.appear = null
+                    this._applyPostAnimationClasses('enter', this.childRef)
+                    maybeCall(this.props.onAfterAppear, this.childRef)
+                }
+                // order of priority:
+                // explicitly defined done callback > props.duration defined > autoCss sniffing
+                if (this.props.onAppear && this.props.onAppear.length >= 2) {
+                    this._applyActiveTransitionClasses('enter', this.childRef)
+                    this.props.onAppear(this.childRef, doneCallback)
+                } else {
+                    this._applyActiveTransitionClasses('enter', this.childRef)
+                    maybeCall(this.props.onAppear, this.childRef)
+                    this._onTransitionsEnd('appear', this.childRef, doneCallback)
+                }
             })
         }
     }
@@ -97,7 +98,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
     componentWillReceiveProps(nextProps: Readonly<TransitionProps>) {
         // React will not attempt to replace elements
         // render the child with the new props
-        if (componentsEqual(this.props.children, nextProps.children) && !this.state.isLeaving) {
+        if (componentsEqual(this.props.children, nextProps.children)) {
             this.setState({
                 child: React.Children.only(nextProps.children)
             })
@@ -105,68 +106,19 @@ export default class Transition extends React.Component<TransitionProps, Transit
     }
 
     componentDidUpdate(prevProps: Readonly<TransitionProps>) {
-        function startEnterCallback(this: Transition) {
-            maybeCall(this.props.onBeforeEnter, this.childRef)
-            this._applyInitialTransitionClasses('enter')
-
-            raf(() => {
-                raf(() => {
-                    const doneCallback = () => {
-                        this._timeoutClears.enter = null
-                        this._applyPostAnimationClasses('enter')
-                        this.setState({
-                            isEntering: false
-                        })
-                        maybeCall(this.props.onAfterEnter, this.childRef)
-                    }
-
-                    if (this.props.onEnter && this.props.onEnter.length >= 2) {
-                        this.props.onEnter(this.childRef, doneCallback)
-                        this._applyActiveTransitionClasses('enter')
-                    } else {
-                        maybeCall(this.props.onEnter, this.childRef)
-                        this._applyActiveTransitionClasses('enter')
-                        this._onTransitionsEnd('enter', doneCallback)
-                    }
-                })
-            })
-        }
         // children have changed, React is going to replace elements
         // transition the element out
         if (!componentsEqual(this.props.children, prevProps.children)) {
-            maybeCall(this.props.onBeforeLeave, this.childRef)
-            this._applyInitialTransitionClasses('leave')
-            this.setState({
-                isLeaving: true
-            })
-
-            raf(() => {
-                raf(() => {
-                    const doneCallback = () => {
-                        this._timeoutClears.leave = null
-                        const prevRef = this.childRef
-                        this._applyPostAnimationClasses('leave')
-                        maybeCall(this.props.onAfterLeave, prevRef)
-                        this.setState(
-                            {
-                                child: this.child,
-                                isEntering: true,
-                                isLeaving: false
-                            },
-                            startEnterCallback
-                        )
-                    }
-
-                    if (this.props.onLeave && this.props.onLeave.length >= 2) {
-                        this.props.onLeave(this.childRef, doneCallback)
-                        this._applyActiveTransitionClasses('leave')
-                    } else {
-                        maybeCall(this.props.onLeave, this.childRef)
-                        this._applyActiveTransitionClasses('leave')
-                        this._onTransitionsEnd('leave', doneCallback)
-                    }
-                })
-            })
+            this._clearTimeouts()
+            this.setState(
+                {
+                    oldChild: this._getChild(prevProps)
+                },
+                () => {
+                    this.props.mode !== 'out-in' && this._transitionChildIn()
+                    this.props.mode !== 'in-out' && this._transitionChildOut()
+                }
+            )
         }
     }
 
@@ -175,15 +127,28 @@ export default class Transition extends React.Component<TransitionProps, Transit
     }
 
     render() {
-        return <TransitionWrapper ref={this._setRef}>{this.state.child}</TransitionWrapper>
-    }
-
-    get child() {
-        return React.Children.only(this.props.children)
-    }
-
-    get childRef() {
-        return ReactDOM.findDOMNode(this._childRef) as HTMLElement
+        if (this.props.mode === 'out-in') {
+            return this.state.oldChild ? (
+                <TransitionWrapper ref={(ref: React.ReactInstance) => (this._oldChildRef = ref)}>
+                    {this.state.oldChild}
+                </TransitionWrapper>
+            ) : (
+                <TransitionWrapper ref={(ref: React.ReactInstance) => (this._childRef = ref)}>
+                    {this.state.child}
+                </TransitionWrapper>
+            )
+        } else {
+            return (
+                <TransitionWrapper>
+                    <TransitionWrapper ref={(ref: React.ReactInstance) => (this._oldChildRef = ref)}>
+                        {this.state.oldChild}
+                    </TransitionWrapper>
+                    <TransitionWrapper ref={(ref: React.ReactInstance) => (this._childRef = ref)}>
+                        {this.state.child}
+                    </TransitionWrapper>
+                </TransitionWrapper>
+            )
+        }
     }
 
     get prefix() {
@@ -191,8 +156,95 @@ export default class Transition extends React.Component<TransitionProps, Transit
         return `${prefix}`
     }
 
-    _setRef = (ref: React.ReactInstance) => {
-        this._childRef = ref
+    get childRef() {
+        return ReactDOM.findDOMNode(this._childRef) as HTMLElement
+    }
+
+    get oldChildRef() {
+        return ReactDOM.findDOMNode(this._oldChildRef) as HTMLEmbedElement
+    }
+
+    _getChild(props: TransitionProps) {
+        return React.Children.only(props.children)
+    }
+
+    _transitionChildIn = () => {
+        this.setState(
+            {
+                isEntering: true,
+                child: this._getChild(this.props)
+            },
+            () => {
+                this._applyInitialTransitionClasses('enter', this.childRef)
+                maybeCall(this.props.onBeforeEnter, this.childRef)
+                onNextFrame(() => {
+                    if (this.props.onEnter && this.props.onEnter.length >= 2) {
+                        this._applyActiveTransitionClasses('enter', this.childRef)
+                        this.props.onEnter(this.childRef, this._afterEnterCallback)
+                    } else {
+                        this._applyActiveTransitionClasses('enter', this.childRef)
+                        maybeCall(this.props.onEnter, this.childRef)
+                        this._onTransitionsEnd('enter', this.childRef, this._afterEnterCallback)
+                    }
+                })
+            }
+        )
+    }
+
+    _transitionChildOut = () => {
+        this.setState(
+            {
+                isLeaving: true
+            },
+            () => {
+                this._applyInitialTransitionClasses('leave', this.oldChildRef)
+                maybeCall(this.props.onBeforeLeave, this.oldChildRef)
+                onNextFrame(() => {
+                    if (this.props.onLeave && this.props.onLeave.length >= 2) {
+                        this._applyActiveTransitionClasses('leave', this.oldChildRef)
+                        this.props.onLeave(this.oldChildRef, this._afterLeaveCallback)
+                    } else {
+                        this._applyActiveTransitionClasses('leave', this.oldChildRef)
+                        maybeCall(this.props.onLeave, this.oldChildRef)
+                        this._onTransitionsEnd('leave', this.oldChildRef, this._afterLeaveCallback)
+                    }
+                })
+            }
+        )
+    }
+
+    _afterEnterCallback = () => {
+        this._timeoutClears.enter = null
+        this._applyPostAnimationClasses('enter', this.childRef)
+        maybeCall(this.props.onAfterEnter, this.childRef)
+        this.setState(
+            {
+                isEntering: false
+            },
+            this.props.mode === 'in-out' ? this._transitionChildOut : noop
+        )
+    }
+
+    _afterLeaveCallback = () => {
+        this._timeoutClears.leave = null
+        this._applyPostAnimationClasses('leave', this.oldChildRef)
+        maybeCall(this.props.onAfterLeave, this.oldChildRef)
+        this.setState(
+            {
+                oldChild: null,
+                isLeaving: false
+            },
+            this.props.mode === 'out-in' ? this._transitionChildIn : noop
+        )
+    }
+
+    _onTransitionsEnd(type: 'appear' | EnterOrLeave, el: HTMLElement, callback: Function) {
+        if (this.props.duration) {
+            let timeout = window.setTimeout(callback, this.props.duration)
+            this._timeoutClears[type] = () => window.clearTimeout(timeout)
+        } else {
+            this._timeoutClears[type] = onAllTransitionsEnd(this.props.type, el, callback)
+        }
     }
 
     _clearTimeouts() {
@@ -207,15 +259,6 @@ export default class Transition extends React.Component<TransitionProps, Transit
         if (this._timeoutClears.leave) {
             this._timeoutClears.leave()
             maybeCall(this.props.onCancelLeave, this.childRef)
-        }
-    }
-
-    _onTransitionsEnd(type: 'appear' | EnterOrLeave, callback: Function) {
-        if (this.props.duration) {
-            let timeout = window.setTimeout(callback, this.props.duration)
-            this._timeoutClears[type] = () => window.clearTimeout(timeout)
-        } else {
-            this._timeoutClears[type] = onAllTransitionsEnd(this.props.type, this.childRef, callback)
         }
     }
 
@@ -237,18 +280,18 @@ export default class Transition extends React.Component<TransitionProps, Transit
             : this.props.leaveToClass || `${this.prefix}-leave-to`
     }
 
-    _applyInitialTransitionClasses(type: EnterOrLeave) {
-        this.childRef.classList.add(this._getInitialClass(type))
-        this.childRef.classList.add(this._getActiveClass(type))
+    _applyInitialTransitionClasses(type: EnterOrLeave, el: HTMLElement) {
+        el.classList.add(this._getInitialClass(type))
+        el.classList.add(this._getActiveClass(type))
     }
 
-    _applyActiveTransitionClasses(type: EnterOrLeave) {
-        this.childRef.classList.remove(this._getInitialClass(type))
-        this.childRef.classList.add(this._getPostClass(type))
+    _applyActiveTransitionClasses(type: EnterOrLeave, el: HTMLElement) {
+        el.classList.remove(this._getInitialClass(type))
+        el.classList.add(this._getPostClass(type))
     }
 
-    _applyPostAnimationClasses(type: EnterOrLeave) {
-        this.childRef.classList.remove(this._getActiveClass(type))
-        this.childRef.classList.remove(this._getPostClass(type))
+    _applyPostAnimationClasses(type: EnterOrLeave, el: HTMLElement) {
+        el.classList.remove(this._getActiveClass(type))
+        el.classList.remove(this._getPostClass(type))
     }
 }

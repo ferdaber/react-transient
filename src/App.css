@@ -10,6 +10,16 @@
     opacity: 1;
 }
 
+.block-enter,
+.block-leave-to {
+    opacity: 0;
+}
+
+.block-entering,
+.block-leaving {
+    transition: opacity 1000ms linear;
+}
+
 /* .block-enter {
     opacity: 0;
     transform: translateX(-100px);
@@ -36,7 +46,7 @@
     transform: translateY(-100px);
 } */
 
-.block-enter {
+/* .block-enter {
     opacity: 0;
 }
 
@@ -54,7 +64,7 @@
 .block-leave-to {
     opacity: 0;
     transform: translateX(100px);
-}
+} */
 
 @keyframes slidein {
     from {

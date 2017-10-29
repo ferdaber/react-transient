@@ -19,3 +19,10 @@ export const raf =
         lastTime = currTime + timeToCall
         return id
     }
+
+export function onNextFrame(callback: FrameRequestCallback) {
+    raf(() => raf(callback))
+}
+
+// tslint:disable-next-line
+export function noop() {}
