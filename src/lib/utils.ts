@@ -36,4 +36,5 @@ export function insertAtIndex<T>(array: T[], item: T, index: number) {
         index++
     }
     array[index] = item
+    return index
 }

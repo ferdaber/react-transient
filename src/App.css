@@ -12,6 +12,10 @@
     transition: opacity 1000ms linear;
 }
 
+.number-move {
+    transition: transform 500ms linear;
+}
+
 .box {
     width: 250px;
     height: 250px;

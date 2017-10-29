@@ -1,16 +1,28 @@
+import { onAllTransitionsEnd } from './transition-utils'
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
 
 import Transition, { TransitionProps } from './Transition'
 import TransitionWrapper from './TransitionWrapper'
 
-import { insertAtIndex, maybeCall } from './utils'
+import { insertAtIndex, maybeCall, onNextFrame } from './utils'
 
 export interface TransitionGroupProps extends TransitionProps {
     children: JSX.Element | JSX.Element[]
 }
 
 export interface TransitionGroupState {
-    children: JSX.Element[]
+    children: Child[]
+}
+
+interface Child {
+    key: React.Key
+    element: JSX.Element
+}
+
+interface ChildPosition {
+    clientRect: ClientRect
+    key: React.Key
 }
 
 export class TransitionGroup extends React.Component<TransitionGroupProps, TransitionGroupState> {
@@ -18,29 +30,45 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         children: this._wrapChildren(this.props)
     }
 
+    private _refs: {
+        [key: string]: Transition
+    } = Object.create(null)
+    private _movedChildren: ChildPosition[]
+
     componentWillReceiveProps(nextProps: TransitionGroupProps) {
         const children = this.state.children
         const nextChildren = this._wrapChildren(nextProps)
-        const mergedChildren: JSX.Element[] = []
+        const mergedChildren: Child[] = []
+        this._movedChildren = []
         for (let i = 0; i < Math.max(children.length, nextChildren.length); i++) {
             const child = children[i]
             const nextChildIndex = child && nextChildren.findIndex(c => c.key === child.key)
             const newChild = nextChildren[i] && !children.some(c => c.key === nextChildren[i].key) && nextChildren[i]
             if (nextChildIndex >= 0) {
                 // child exists already, but may have moved
-                insertAtIndex(mergedChildren, nextChildren[nextChildIndex], nextChildIndex)
+                const newIndex = insertAtIndex(mergedChildren, nextChildren[nextChildIndex], nextChildIndex)
+                if (newIndex !== i) {
+                    let oldElement = ReactDOM.findDOMNode(this._refs[child.key])
+                    this._movedChildren.push({
+                        clientRect: oldElement.getBoundingClientRect(),
+                        key: child.key
+                    })
+                }
             } else if (nextChildIndex === -1) {
                 // child is leaving
-                const oldOnAfterLeave = child.props.onAfterLeave
+                const oldOnAfterLeave = child.element.props.onAfterLeave
                 insertAtIndex(
                     mergedChildren,
-                    React.cloneElement(child, {
-                        children: null,
-                        onAfterLeave: (el: HTMLElement) => {
-                            maybeCall(oldOnAfterLeave, el)
-                            this._unmountAtKey(child.key)
-                        }
-                    }),
+                    {
+                        key: child.key,
+                        element: React.cloneElement(child.element, {
+                            children: null,
+                            onAfterLeave: (el: HTMLElement) => {
+                                maybeCall(oldOnAfterLeave, el)
+                                this._unmountAtKey(child.key)
+                            }
+                        })
+                    },
                     i
                 )
             }
@@ -54,8 +82,19 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         })
     }
 
+    componentDidUpdate() {
+        this._movedChildren.forEach(childPosition => {
+            const el = ReactDOM.findDOMNode(this._refs[childPosition.key]) as HTMLElement
+            this._transitionChildMove(childPosition.clientRect, el)
+        })
+    }
+
     render() {
-        return <TransitionWrapper component={this.props.component}>{this.state.children}</TransitionWrapper>
+        return (
+            <TransitionWrapper component={this.props.component}>
+                {this.state.children.map(child => child.element)}
+            </TransitionWrapper>
+        )
     }
 
     get strippedProps() {
@@ -63,12 +102,15 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         return restProps
     }
 
-    private _wrapChildren(props: TransitionGroupProps) {
-        return React.Children.map(props.children, (child: JSX.Element) => (
-            <Transition {...this.strippedProps} appear key={child.key}>
-                {child}
-            </Transition>
-        ))
+    private _wrapChildren(props: TransitionGroupProps): Child[] {
+        return React.Children.map(props.children, (child: JSX.Element) => ({
+            key: child.key,
+            element: (
+                <Transition {...this.strippedProps} appear key={child.key} ref={ref => (this._refs[child.key] = ref)}>
+                    {child}
+                </Transition>
+            )
+        }))
     }
 
     private _unmountAtKey(key: React.Key) {
@@ -77,6 +119,24 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         children.splice(indexToUnmount, 1)
         this.setState({
             children
+        })
+    }
+
+    private _transitionChildMove(oldClientRect: ClientRect, childEl: HTMLElement) {
+        if (!childEl) return
+        const moveClass = `${this.props.name || 't'}-move`
+        const { left, top } = childEl.getBoundingClientRect()
+        const dLeft = oldClientRect.left - left
+        const dTop = oldClientRect.top - top
+        const oldTransform = childEl.style.transform
+        childEl.style.transform = `translate(${dLeft}px, ${dTop}px)`
+
+        onNextFrame(() => {
+            childEl.classList.add(moveClass)
+            childEl.style.transform = oldTransform
+            onAllTransitionsEnd('transition', childEl, () => {
+                childEl.classList.remove(moveClass)
+            })
         })
     }
 }
