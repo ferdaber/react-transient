@@ -108,7 +108,11 @@ export default class Transition extends React.Component<TransitionProps, Transit
     componentDidUpdate(prevProps: Readonly<TransitionProps>) {
         // children have changed, React is going to replace elements
         // transition the element out
-        if (!componentsEqual(this.props.children, prevProps.children)) {
+        if (
+            !componentsEqual(this.props.children, prevProps.children) &&
+            // prevent transition interruptions while an element is leaving in out-in mode
+            !(this.props.mode === 'out-in' && this.state.isLeaving)
+        ) {
             this._clearTimeouts()
             this.setState(
                 {
@@ -258,7 +262,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
         }
         if (this._timeoutClears.leave) {
             this._timeoutClears.leave()
-            maybeCall(this.props.onCancelLeave, this.childRef)
+            maybeCall(this.props.onCancelLeave, this.oldChildRef || this.childRef)
         }
     }
 
