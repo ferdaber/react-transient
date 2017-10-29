@@ -8,6 +8,10 @@ export function componentsEqual(compA: React.ReactElement<{}>, compB: React.Reac
     return compA.key === compB.key && compA.type === compB.type
 }
 
+export function canRenderFragments() {
+    return +React.version.split('.')[0] >= 16
+}
+
 let lastTime = 0
 export const raf =
     requestAnimationFrame ||
