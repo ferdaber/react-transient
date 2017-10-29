@@ -5,7 +5,7 @@ export function maybeCall(func?: Function, ...args: any[]) {
 }
 
 export function componentsEqual(compA: React.ReactElement<{}>, compB: React.ReactElement<{}>) {
-    return compA.key === compB.key && compA.type === compB.type
+    return (!compA && !compB) || (compA && compB && compA.key === compB.key && compA.type === compB.type)
 }
 
 export function canRenderFragments() {
@@ -30,3 +30,10 @@ export function onNextFrame(callback: FrameRequestCallback) {
 
 // tslint:disable-next-line
 export function noop() {}
+
+export function insertAtIndex<T>(array: T[], item: T, index: number) {
+    while (array[index] !== undefined) {
+        index++
+    }
+    array[index] = item
+}

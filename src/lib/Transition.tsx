@@ -1,26 +1,10 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { onAllTransitionsEnd } from './transition-utils'
-import { canRenderFragments, componentsEqual, maybeCall, noop, onNextFrame } from './utils'
 
-interface TransitionWrapperProps {
-    component?: string | React.SFC<any> | React.ComponentClass<any>
-    children: JSX.Element | JSX.Element[]
-}
-class TransitionWrapper extends React.Component<TransitionWrapperProps, {}> {
-    render() {
-        const Wrapper = this.props.component || 'div'
-        return React.Children.count(this.props.children) > 1 ? (
-            canRenderFragments() ? (
-                this.props.children
-            ) : (
-                <Wrapper>{this.props.children}</Wrapper>
-            )
-        ) : (
-            this.props.children
-        )
-    }
-}
+import TransitionWrapper, { WrapperComponent } from './TransitionWrapper'
+
+import { onAllTransitionsEnd } from './transition-utils'
+import { componentsEqual, maybeCall, noop, onNextFrame } from './utils'
 
 export interface TransitionProps
     extends Partial<{
@@ -29,7 +13,7 @@ export interface TransitionProps
             duration: number
             type: 'animation' | 'transition'
             mode: 'in-out' | 'out-in'
-            component: string | React.SFC<any> | React.ComponentClass<any>
+            component: WrapperComponent
 
             enterClass: string
             enteringClass: string
@@ -53,7 +37,8 @@ export interface TransitionProps
             onLeave(el: HTMLElement, done: () => void): void
             onAfterLeave(el: HTMLElement): void
             onCancelLeave(el: HTMLElement): void
-        }> {
+        }> {}
+interface SingleTransitionProps extends TransitionProps {
     children: JSX.Element
 }
 
@@ -66,20 +51,21 @@ export interface TransitionState {
 
 type EnterOrLeave = 'enter' | 'leave'
 
-export default class Transition extends React.Component<TransitionProps, TransitionState> {
-    _childRef: React.ReactInstance
-    _oldChildRef: React.ReactInstance
-    _timeoutClears = {
-        appear: null as Function,
-        enter: null as Function,
-        leave: null as Function
-    }
-
+export class Transition extends React.Component<SingleTransitionProps, TransitionState> {
     state: TransitionState = {
         child: this._getChild(this.props),
         oldChild: null,
         isEntering: !!this.props.appear,
         isLeaving: false
+    }
+
+    private _isUnmounted = false
+    private _childRef: React.ReactInstance
+    private _oldChildRef: React.ReactInstance
+    private _timeoutClears = {
+        appear: null as Function,
+        enter: null as Function,
+        leave: null as Function
     }
 
     componentDidMount() {
@@ -110,17 +96,17 @@ export default class Transition extends React.Component<TransitionProps, Transit
         }
     }
 
-    componentWillReceiveProps(nextProps: Readonly<TransitionProps>) {
+    componentWillReceiveProps(nextProps: Readonly<SingleTransitionProps>) {
         // React will not attempt to replace elements
         // render the child with the new props
         if (componentsEqual(this.props.children, nextProps.children)) {
-            this.setState({
-                child: React.Children.only(nextProps.children)
+            this._safelySetState({
+                child: this._getChild(nextProps)
             })
         }
     }
 
-    componentDidUpdate(prevProps: Readonly<TransitionProps>) {
+    componentDidUpdate(prevProps: Readonly<SingleTransitionProps>) {
         // children have changed, React is going to replace elements
         // transition the element out
         if (
@@ -129,7 +115,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
             !(this.props.mode === 'out-in' && this.state.isLeaving)
         ) {
             this._clearTimeouts()
-            this.setState(
+            this._safelySetState(
                 {
                     oldChild: this._getChild(prevProps)
                 },
@@ -143,6 +129,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
 
     componentWillUnmount() {
         this._clearTimeouts()
+        this._isUnmounted = true
     }
 
     render() {
@@ -178,18 +165,26 @@ export default class Transition extends React.Component<TransitionProps, Transit
         return ReactDOM.findDOMNode(this._oldChildRef) as HTMLEmbedElement
     }
 
-    _getChild(props: TransitionProps) {
-        return React.Children.only(props.children)
+    private _getChild(props: SingleTransitionProps) {
+        return props.children ? React.Children.only(props.children) : null
     }
 
-    _transitionChildIn = () => {
-        this.setState(
+    private _safelySetState<K extends keyof TransitionState>(
+        newState: Pick<TransitionState, K>,
+        afterCallback?: () => any
+    ) {
+        !this._isUnmounted && this.setState(newState, afterCallback)
+    }
+
+    private _transitionChildIn = () => {
+        this._safelySetState(
             {
                 isEntering: true,
                 child: this._getChild(this.props)
             },
             () => {
                 const childEl = this.childRef
+                if (!childEl) return
                 this._applyInitialTransitionClasses('enter', childEl)
                 maybeCall(this.props.onBeforeEnter, childEl)
                 onNextFrame(() => {
@@ -206,13 +201,14 @@ export default class Transition extends React.Component<TransitionProps, Transit
         )
     }
 
-    _transitionChildOut = () => {
-        this.setState(
+    private _transitionChildOut = () => {
+        this._safelySetState(
             {
                 isLeaving: true
             },
             () => {
                 const oldChildEl = this.oldChildRef
+                if (!oldChildEl) return
                 this._applyInitialTransitionClasses('leave', oldChildEl)
                 maybeCall(this.props.onBeforeLeave, oldChildEl)
                 onNextFrame(() => {
@@ -229,11 +225,11 @@ export default class Transition extends React.Component<TransitionProps, Transit
         )
     }
 
-    _afterEnterCallback = (el: HTMLElement) => () => {
+    private _afterEnterCallback = (el: HTMLElement) => () => {
         this._timeoutClears.enter = null
         this._applyPostAnimationClasses('enter', el)
         maybeCall(this.props.onAfterEnter, el)
-        this.setState(
+        this._safelySetState(
             {
                 isEntering: false
             },
@@ -241,11 +237,11 @@ export default class Transition extends React.Component<TransitionProps, Transit
         )
     }
 
-    _afterLeaveCallback = (el: HTMLElement) => () => {
+    private _afterLeaveCallback = (el: HTMLElement) => () => {
         this._timeoutClears.leave = null
         this._applyPostAnimationClasses('leave', el)
         maybeCall(this.props.onAfterLeave, el)
-        this.setState(
+        this._safelySetState(
             {
                 oldChild: null,
                 isLeaving: false
@@ -254,7 +250,7 @@ export default class Transition extends React.Component<TransitionProps, Transit
         )
     }
 
-    _onTransitionsEnd(type: 'appear' | EnterOrLeave, el: HTMLElement, callback: Function) {
+    private _onTransitionsEnd(type: 'appear' | EnterOrLeave, el: HTMLElement, callback: Function) {
         if (this.props.duration) {
             let timeout = window.setTimeout(callback, this.props.duration)
             this._timeoutClears[type] = () => window.clearTimeout(timeout)
@@ -263,14 +259,14 @@ export default class Transition extends React.Component<TransitionProps, Transit
         }
     }
 
-    _clearTimeouts() {
+    private _clearTimeouts() {
         if (this._timeoutClears.appear) {
             this._timeoutClears.appear()
-            maybeCall(this.props.onCancelAppear, this.childRef)
+            maybeCall(this.props.onCancelAppear, this.childRef || this.oldChildRef)
         }
         if (this._timeoutClears.enter) {
             this._timeoutClears.enter()
-            maybeCall(this.props.onCancelEnter, this.childRef)
+            maybeCall(this.props.onCancelEnter, this.childRef || this.oldChildRef)
         }
         if (this._timeoutClears.leave) {
             this._timeoutClears.leave()
@@ -278,36 +274,38 @@ export default class Transition extends React.Component<TransitionProps, Transit
         }
     }
 
-    _getInitialClass(type: EnterOrLeave) {
+    private _getInitialClass(type: EnterOrLeave) {
         return type === 'enter'
             ? this.props.enterClass || `${this.prefix}-enter`
             : this.props.leaveClass || `${this.prefix}-leave`
     }
 
-    _getActiveClass(type: EnterOrLeave) {
+    private _getActiveClass(type: EnterOrLeave) {
         return type === 'enter'
             ? this.props.enteringClass || `${this.prefix}-entering`
             : this.props.leavingClass || `${this.prefix}-leaving`
     }
 
-    _getPostClass(type: EnterOrLeave) {
+    private _getPostClass(type: EnterOrLeave) {
         return type === 'enter'
             ? this.props.enterToClass || `${this.prefix}-enter-to`
             : this.props.leaveToClass || `${this.prefix}-leave-to`
     }
 
-    _applyInitialTransitionClasses(type: EnterOrLeave, el: HTMLElement) {
+    private _applyInitialTransitionClasses(type: EnterOrLeave, el: HTMLElement) {
         el.classList.add(this._getInitialClass(type))
         el.classList.add(this._getActiveClass(type))
     }
 
-    _applyActiveTransitionClasses(type: EnterOrLeave, el: HTMLElement) {
+    private _applyActiveTransitionClasses(type: EnterOrLeave, el: HTMLElement) {
         el.classList.remove(this._getInitialClass(type))
         el.classList.add(this._getPostClass(type))
     }
 
-    _applyPostAnimationClasses(type: EnterOrLeave, el: HTMLElement) {
+    private _applyPostAnimationClasses(type: EnterOrLeave, el: HTMLElement) {
         el.classList.remove(this._getActiveClass(type))
         el.classList.remove(this._getPostClass(type))
     }
 }
+
+export default Transition

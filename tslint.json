@@ -14,7 +14,6 @@
         "max-line-length": [true, 120],
         "member-ordering": [true, "public-before-private", "static-before-instance", "variables-before-functions"],
         "no-arg": true,
-        "no-bitwise": true,
         "no-consecutive-blank-lines": true,
         "no-construct": true,
         "no-debugger": true,

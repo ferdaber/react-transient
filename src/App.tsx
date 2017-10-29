@@ -1,5 +1,6 @@
 import * as React from 'react'
-import Transition from './lib/Transition'
+import Transition, { TransitionProps } from './lib/Transition'
+import TransitionGroup from './lib/TransitionGroup'
 
 import './App.css'
 
@@ -21,42 +22,99 @@ const log = (message: string) => (el: HTMLElement) => {
     console.log('-------------------------------')
 }
 
+function shuffle<T>(array: T[]) {
+    var currentIndex = array.length,
+        temporaryValue,
+        randomIndex
+
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
+        // Pick a remaining element...
+        randomIndex = Math.floor(Math.random() * currentIndex)
+        currentIndex -= 1
+
+        // And swap it with the current element.
+        temporaryValue = array[currentIndex]
+        array[currentIndex] = array[randomIndex]
+        array[randomIndex] = temporaryValue
+    }
+
+    return array
+}
+
+const transitionProps: TransitionProps = {
+    appear: true,
+    mode: 'out-in',
+    onBeforeAppear: log('onBeforeAppear'),
+    onAppear: log('onAppear'),
+    onAfterAppear: log('onAfterAppear'),
+    onCancelAppear: log('onCancelAppear'),
+    onBeforeEnter: log('onBeforeEnter'),
+    onEnter: log('onEnter'),
+    onAfterEnter: log('onAfterEnter'),
+    onCancelEnter: log('onCancelEnter'),
+    onBeforeLeave: log('onBeforeLeave'),
+    onLeave: log('onLeave'),
+    onAfterLeave: log('onAfterLeave'),
+    onCancelLeave: log('onCancelLeave')
+}
+
 class App extends React.Component {
     state = {
         isA: true,
-        isAppended: true
+        isAppended: true,
+        numberList: [] as number[]
     }
 
     render() {
         return (
             <div>
-                <button onClick={() => this.setState({ isA: !this.state.isA })}>Click Me!</button>
-                <button onClick={() => this.setState({ isAppended: !this.state.isAppended })}>Click Me!</button>
-                <Transition
-                    name="block"
-                    appear
-                    mode="out-in"
-                    onBeforeAppear={log('onBeforeAppear')}
-                    onAppear={log('onAppear')}
-                    onAfterAppear={log('onAfterAppear')}
-                    onCancelAppear={log('onCancelAppear')}
-                    onBeforeEnter={log('onBeforeEnter')}
-                    onEnter={log('onEnter')}
-                    onAfterEnter={log('onAfterEnter')}
-                    onCancelEnter={log('onCancelEnter')}
-                    onBeforeLeave={log('onBeforeLeave')}
-                    onLeave={log('onLeave')}
-                    onAfterLeave={log('onAfterLeave')}
-                    onCancelLeave={log('onCancelLeave')}
-                >
+                <button onClick={() => this.setState({ isA: !this.state.isA })}>Transition props!</button>
+                <button onClick={() => this.setState({ isAppended: !this.state.isAppended })}>Modify props!</button>
+                <button onClick={() => this.addNumber()}>Add number!</button>
+                <button onClick={() => this.removeNumber()}>Remove number!</button>
+                <button onClick={() => this.shuffle()}>Shuffle!</button>
+                <Transition {...transitionProps} name="block">
                     {this.state.isA ? (
                         <BlockA>{'Hello World A!' + (this.state.isAppended ? ' also this' : '')}</BlockA>
                     ) : (
                         <BlockB>{'Hello World B!' + (this.state.isAppended ? ' also this' : '')}</BlockB>
                     )}
                 </Transition>
+                <TransitionGroup {...transitionProps} name="number">
+                    {this.state.numberList.map(n => (
+                        <div key={n} className="number">
+                            Number: {n} <button onClick={() => this.removeNumber(n)}>X</button>
+                        </div>
+                    ))}
+                </TransitionGroup>
             </div>
         )
+    }
+
+    shuffle() {
+        this.setState({
+            numberList: shuffle([...this.state.numberList])
+        })
+    }
+
+    addNumber() {
+        do {
+            var newNum = ~~(1 + Math.random() * 100)
+        } while (this.state.numberList.some(n => n === newNum))
+        const newIndex = ~~(Math.random() * this.state.numberList.length)
+        const numberList = [...this.state.numberList]
+        numberList.splice(newIndex, 0, newNum)
+        this.setState({ numberList })
+    }
+
+    removeNumber(numToRemove?: number) {
+        if (numToRemove == null) {
+            numToRemove = this.state.numberList[~~(Math.random() * this.state.numberList.length)]
+        }
+        this.setState({
+            numberList: this.state.numberList.filter(n => n !== numToRemove)
+        })
     }
 }
 

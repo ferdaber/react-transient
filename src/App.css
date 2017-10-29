@@ -1,3 +1,17 @@
+.number {
+    opacity: 1;
+}
+
+.number-enter,
+.number-leave-to {
+    opacity: 0;
+}
+
+.number-entering,
+.number-leaving {
+    transition: opacity 1000ms linear;
+}
+
 .box {
     width: 250px;
     height: 250px;
