@@ -17,7 +17,7 @@
         "clean": "rimraf dist && rimraf lib",
         "build": "npm run clean && npm run build:lib && npm run build:dist",
         "build:lib": "tsc -p tsconfig.lib.json",
-        "build:dist": "NODE_ENV=production webpack -p",
+        "build:dist": "webpack --config webpack.config.production.js -p",
         "test": "react-scripts-ts test --env=jsdom"
     },
     "files": ["src/lib", "dist", "lib"],
