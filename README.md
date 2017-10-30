@@ -31,10 +31,6 @@ Documentation is coming soon! For now, please take a look at the source Typescri
 ## Examples
 ### Fading in and out
 ```css
-button {
-    opacity: 1;
-}
-
 .toggle-enter,
 .toggle-leave-to {
     opacity: 0;
@@ -74,8 +70,6 @@ class FadeToggle extends React.Component {
 ```css
 .btn {
     display: block;
-    opacity: 1;
-    width: 100px;
     position: absolute;
 }
 
@@ -88,11 +82,6 @@ class FadeToggle extends React.Component {
 .btn-entering,
 .btn-leaving {
     transition: all 200ms linear;
-}
-
-.btn-enter-to,
-.btn-leave {
-    transform: translateX(0);
 }
 
 .off.btn-enter,
