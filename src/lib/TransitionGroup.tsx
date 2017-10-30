@@ -15,7 +15,7 @@ export interface TransitionGroupState {
     children: Child[]
 }
 
-interface Child {
+export interface Child {
     key: React.Key
     element: JSX.Element
 }

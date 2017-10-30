@@ -38,7 +38,8 @@ export interface TransitionProps
             onAfterLeave(el: HTMLElement): void
             onCancelLeave(el: HTMLElement): void
         }> {}
-interface SingleTransitionProps extends TransitionProps {
+
+export interface SingleTransitionProps extends TransitionProps {
     children: JSX.Element
 }
 
