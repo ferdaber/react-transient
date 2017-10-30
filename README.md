@@ -46,8 +46,6 @@ button {
 }
 ```
 ```jsx
-import './fade-toggle.css' 
-
 class FadeToggle extends React.Component {
     state = {
         isToggled: false
@@ -68,6 +66,69 @@ class FadeToggle extends React.Component {
                     <button onClick={this.toggle} key='off'>Turn me on!</button>
                 )}
             </Transition>
+        )
+    }
+}
+```
+### Advanced slide in-out
+```css
+.btn {
+    display: block;
+    opacity: 1;
+    width: 100px;
+    position: absolute;
+}
+
+.on.btn-enter,
+.on.btn-leave-to {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+.btn-entering,
+.btn-leaving {
+    transition: all 200ms linear;
+}
+
+.btn-enter-to,
+.btn-leave {
+    transform: translateX(0);
+}
+
+.off.btn-enter,
+.off.btn-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
+}
+```
+```jsx
+class SlideInOut extends React.Component {
+    state = {
+        isOn: false
+    }
+
+    toggle = () => {
+        this.setState({
+            isOn: !this.state.isOn
+        })
+    }
+
+    render() {
+        return (
+            <div style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}>
+                <Transition name="btn">
+                    {this.state.isOn ? (
+                        <button onClick={this.toggle} key="on" className="btn on">On</button>
+                    ) : (
+                        <button onClick={this.toggle} key="off" className="btn off">Off</button>
+                    )}
+                </Transition>
+            </div>
         )
     }
 }
