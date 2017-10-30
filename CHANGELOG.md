@@ -1,4 +1,7 @@
 # Changelog
+## 0.3.0 - 2017-10-30
+* Allow `TransitionGroup` to smoothly transition elements when one is leaving
+
 ## 0.2.1 - 2017-10-30
 * Fixed issue with lib build
 

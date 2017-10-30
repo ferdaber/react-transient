@@ -12,6 +12,10 @@
     transition: opacity 1000ms linear;
 }
 
+.number-leaving {
+    position: absolute;
+}
+
 .number-move {
     transition: transform 500ms linear;
 }
