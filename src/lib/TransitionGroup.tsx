@@ -33,13 +33,16 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
     private _refs: {
         [key: string]: Transition
     } = Object.create(null)
-    private _movedChildren: ChildPosition[]
+    private _timeouts: {
+        [key: string]: Function
+    } = Object.create(null)
+    private _movingChildren: ChildPosition[]
 
     componentWillReceiveProps(nextProps: TransitionGroupProps) {
         const children = this.state.children
         const nextChildren = this._wrapChildren(nextProps)
         const mergedChildren: Child[] = []
-        this._movedChildren = []
+        this._movingChildren = []
         for (let i = 0; i < Math.max(children.length, nextChildren.length); i++) {
             const child = children[i]
             const nextChildIndex = child && nextChildren.findIndex(c => c.key === child.key)
@@ -47,9 +50,10 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
             if (nextChildIndex >= 0) {
                 // child exists already, but may have moved
                 const newIndex = insertAtIndex(mergedChildren, nextChildren[nextChildIndex], nextChildIndex)
-                if (newIndex !== i) {
-                    let oldElement = ReactDOM.findDOMNode(this._refs[child.key])
-                    this._movedChildren.push({
+                // check if child has been displaced, or if it's still in the process of movement
+                let oldElement = ReactDOM.findDOMNode(this._refs[child.key])
+                if (newIndex !== i || oldElement.classList.contains(this.moveClassName)) {
+                    this._movingChildren.push({
                         clientRect: oldElement.getBoundingClientRect(),
                         key: child.key
                     })
@@ -83,9 +87,10 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
     }
 
     componentDidUpdate() {
-        this._movedChildren.forEach(childPosition => {
+        this._clearTransitions()
+        this._movingChildren.forEach(childPosition => {
             const el = ReactDOM.findDOMNode(this._refs[childPosition.key]) as HTMLElement
-            this._transitionChildMove(childPosition.clientRect, el)
+            this._transitionChildMove(childPosition.clientRect, el, childPosition.key)
         })
     }
 
@@ -100,6 +105,10 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
     get strippedProps() {
         const { children, ...restProps } = this.props
         return restProps
+    }
+
+    get moveClassName() {
+        return `${this.props.name || 't'}-move`
     }
 
     private _wrapChildren(props: TransitionGroupProps): Child[] {
@@ -122,9 +131,17 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         })
     }
 
-    private _transitionChildMove(oldClientRect: ClientRect, childEl: HTMLElement) {
+    private _clearTransitions() {
+        for (const key in this._timeouts) {
+            if (this._timeouts[key]) {
+                this._timeouts[key]()
+                this._timeouts[key] = null
+            }
+        }
+    }
+
+    private _transitionChildMove(oldClientRect: ClientRect, childEl: HTMLElement, key: React.Key) {
         if (!childEl) return
-        const moveClass = `${this.props.name || 't'}-move`
         const { left, top } = childEl.getBoundingClientRect()
         const dLeft = oldClientRect.left - left
         const dTop = oldClientRect.top - top
@@ -132,11 +149,14 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         childEl.style.transform = `translate(${dLeft}px, ${dTop}px)`
 
         onNextFrame(() => {
-            childEl.classList.add(moveClass)
+            childEl.classList.add(this.moveClassName)
             childEl.style.transform = oldTransform
-            onAllTransitionsEnd('transition', childEl, () => {
-                childEl.classList.remove(moveClass)
-            })
+            const doneCallback = () => childEl.classList.remove(this.moveClassName)
+            const clearTransition = onAllTransitionsEnd('transition', childEl, doneCallback)
+            this._timeouts[key] = () => {
+                clearTransition()
+                doneCallback()
+            }
         })
     }
 }

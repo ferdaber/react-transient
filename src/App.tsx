@@ -63,7 +63,10 @@ class App extends React.Component {
     state = {
         isA: true,
         isAppended: true,
-        numberList: [] as number[]
+        numberList: [] as number[],
+        grid: Array(25)
+            .fill(0)
+            .map((n, idx) => idx + 1)
     }
 
     render() {
@@ -74,6 +77,7 @@ class App extends React.Component {
                 <button onClick={() => this.addNumber()}>Add number!</button>
                 <button onClick={() => this.removeNumber()}>Remove number!</button>
                 <button onClick={() => this.shuffle()}>Shuffle!</button>
+                <button onClick={() => this.shuffleGrid()}>Shuffle Grid!</button>
                 <Transition {...transitionProps} name="block">
                     {this.state.isA ? (
                         <BlockA>{'Hello World A!' + (this.state.isAppended ? ' also this' : '')}</BlockA>
@@ -88,6 +92,24 @@ class App extends React.Component {
                         </div>
                     ))}
                 </TransitionGroup>
+                <div
+                    style={{
+                        display: 'flex',
+                        width: '100%',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <div className="grid-container">
+                        <TransitionGroup name="grid-cell">
+                            {this.state.grid.map((n, idx) => (
+                                <div className="grid-cell" key={n}>
+                                    {n}
+                                </div>
+                            ))}
+                        </TransitionGroup>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -95,6 +117,13 @@ class App extends React.Component {
     shuffle() {
         this.setState({
             numberList: shuffle([...this.state.numberList])
+        })
+    }
+
+    shuffleGrid() {
+        const grid = shuffle([...this.state.grid])
+        this.setState({
+            grid
         })
     }
 
