@@ -28,3 +28,47 @@ const Foo = () => React.createElement(Transition, {
 Documentation is coming soon! For now, please take a look at the source Typescript files for props definitions:
 * [`Transition`](https://github.com/ferdaber/react-transient/blob/master/src/lib/Transition.tsx)
 * [`TransitionGroup`](https://github.com/ferdaber/react-transient/blob/master/src/lib/TransitionGroup.tsx) (uses the same props as `Transition` with hardcoded `appear` set to `true`)
+## Examples
+### Fading in and out
+```css
+button {
+    opacity: 1;
+}
+
+.toggle-enter,
+.toggle-leave-to {
+    opacity: 0;
+}
+
+.toggle-entering,
+.toggle-leaving {
+    transition: opacity 200ms linear;
+}
+```
+```jsx
+import './fade-toggle.css' 
+
+class FadeToggle extends React.Component {
+    state = {
+        isToggled: false
+    }
+    
+    toggle = () => {
+        this.setState({
+            isToggled: !this.state.isToggled
+        }
+    }
+    
+    render() {
+        return (
+            <Transition name='toggle' mode='out-in'>
+                {this.state.isToggled ? (
+                    <button onClick={this.toggle} key='on'>Turn me off!</button>
+                ) : (
+                    <button onClick={this.toggle} key='off'>Turn me on!</button>
+                )}
+            </Transition>
+        )
+    }
+}
+```
