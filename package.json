@@ -1,8 +1,9 @@
 {
     "name": "react-transient",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": "Ferdy Budhidharma",
     "main": "lib/index.js",
+    "types": "lib/index.d.ts",
     "description": "A transition library focused on simplicity",
     "scripts": {
         "start": "react-scripts-ts start",
