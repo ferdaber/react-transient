@@ -54,7 +54,7 @@ class FadeToggle extends React.Component {
     toggle = () => {
         this.setState({
             isToggled: !this.state.isToggled
-        }
+        })
     }
     
     render() {
