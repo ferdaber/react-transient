@@ -1,5 +1,5 @@
 # Changelog
-## 0.2.0 - 2017-10-30
+## 0.2.1 - 2017-10-30
 * Fixed issue with lib build
 
 ## 0.1.2 - 2017-10-30
