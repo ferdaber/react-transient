@@ -5,7 +5,7 @@ import * as ReactDOM from 'react-dom'
 import Transition, { TransitionProps } from './Transition'
 import TransitionWrapper from './TransitionWrapper'
 
-import { insertAtIndex, maybeCall, onNextFrame, raf } from './utils'
+import { insertAtIndex, maybeCall, onNextFrame } from './utils'
 
 export interface TransitionGroupProps extends TransitionProps {
     children: JSX.Element | JSX.Element[]
@@ -50,7 +50,8 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
             if (nextChildIndex >= 0) {
                 // child exists already, but may have moved
                 insertAtIndex(mergedChildren, nextChildren[nextChildIndex], nextChildIndex)
-                let oldElement = ReactDOM.findDOMNode(this._refs[child.key])
+                let oldElement = ReactDOM.findDOMNode(this._refs[child.key]) as HTMLElement
+                oldElement.style.transform = ''
                 this._movingChildren.push({
                     clientRect: oldElement.getBoundingClientRect(),
                     key: child.key
@@ -77,20 +78,19 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
                 // a new child is transitioning in
                 insertAtIndex(mergedChildren, newChild, i)
             }
-        }
-        this.setState(
-            {
-                children: mergedChildren
-            },
-            () =>
-                raf(() => {
+            this.setState(
+                {
+                    children: mergedChildren
+                },
+                () => {
                     this._clearTransitions()
                     this._movingChildren.forEach(childPosition => {
                         const el = ReactDOM.findDOMNode(this._refs[childPosition.key]) as HTMLElement
                         this._transitionChildMove(childPosition.clientRect, el, childPosition.key)
                     })
-                })
-        )
+                }
+            )
+        }
     }
 
     render() {
@@ -144,12 +144,11 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
         const dLeft = oldClientRect.left - left
         const dTop = oldClientRect.top - top
         if (dLeft === 0 && dTop === 0) return
-        const oldTransform = childEl.style.transform
         childEl.style.transform = `translate(${dLeft}px, ${dTop}px)`
 
         onNextFrame(() => {
             childEl.classList.add(this.moveClassName)
-            childEl.style.transform = oldTransform
+            childEl.style.transform = ''
             const doneCallback = () => {
                 childEl.classList.remove(this.moveClassName)
                 this._timeouts[key] = null

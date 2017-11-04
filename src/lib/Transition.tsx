@@ -13,6 +13,7 @@ export interface TransitionProps
             duration: number
             type: 'animation' | 'transition'
             mode: 'in-out' | 'out-in'
+            noCss: boolean
             component: WrapperComponent
 
             enterClass: string
@@ -116,15 +117,33 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
             !(this.props.mode === 'out-in' && this.state.isLeaving)
         ) {
             this._clearTimeouts()
-            this._safelySetState(
-                {
+            if (!this.props.children && prevProps.children) {
+                // child is unmounted, transition out right away
+                this._safelySetState({
+                    child: null,
                     oldChild: this._getChild(prevProps)
-                },
-                () => {
-                    this.props.mode !== 'out-in' && this._transitionChildIn()
-                    this.props.mode !== 'in-out' && this._transitionChildOut()
-                }
-            )
+                })
+                this._transitionChildOut()
+            } else if (this.props.children && !prevProps.children) {
+                // child is re-mounting, transition in right away
+                this._safelySetState(
+                    {
+                        oldChild: null
+                    },
+                    this._transitionChildIn
+                )
+            } else {
+                // wait to get the old child ref first
+                this._safelySetState(
+                    {
+                        oldChild: this._getChild(prevProps)
+                    },
+                    () => {
+                        this.props.mode !== 'out-in' && this._transitionChildIn()
+                        this.props.mode !== 'in-out' && this._transitionChildOut()
+                    }
+                )
+            }
         }
     }
 
@@ -150,7 +169,9 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
                 {child}
             </TransitionWrapper>
         )
-        return this.state.oldChild ? (this.props.mode === 'out-in' ? oldChild : bothChildren) : child
+        return this.state.oldChild
+            ? this.props.mode === 'out-in' || !this.state.child ? oldChild : bothChildren
+            : child
     }
 
     get prefix() {
@@ -163,7 +184,7 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
     }
 
     get oldChildRef() {
-        return ReactDOM.findDOMNode(this._oldChildRef) as HTMLEmbedElement
+        return this.props.children ? ReactDOM.findDOMNode(this._oldChildRef) as HTMLEmbedElement : this.childRef
     }
 
     private _getChild(props: SingleTransitionProps) {
@@ -203,27 +224,23 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
     }
 
     private _transitionChildOut = () => {
-        this._safelySetState(
-            {
-                isLeaving: true
-            },
-            () => {
-                const oldChildEl = this.oldChildRef
-                if (!oldChildEl) return
-                this._applyInitialTransitionClasses('leave', oldChildEl)
-                maybeCall(this.props.onBeforeLeave, oldChildEl)
-                onNextFrame(() => {
-                    if (this.props.onLeave && this.props.onLeave.length >= 2) {
-                        this._applyActiveTransitionClasses('leave', oldChildEl)
-                        this.props.onLeave(oldChildEl, this._afterLeaveCallback(oldChildEl))
-                    } else {
-                        this._applyActiveTransitionClasses('leave', oldChildEl)
-                        maybeCall(this.props.onLeave, oldChildEl)
-                        this._onTransitionsEnd('leave', oldChildEl, this._afterLeaveCallback(oldChildEl))
-                    }
-                })
+        this._safelySetState({
+            isLeaving: true
+        })
+        const oldChildEl = this.oldChildRef
+        if (!oldChildEl) return
+        this._applyInitialTransitionClasses('leave', oldChildEl)
+        maybeCall(this.props.onBeforeLeave, oldChildEl)
+        onNextFrame(() => {
+            if (this.props.onLeave && this.props.onLeave.length >= 2) {
+                this._applyActiveTransitionClasses('leave', oldChildEl)
+                this.props.onLeave(oldChildEl, this._afterLeaveCallback(oldChildEl))
+            } else {
+                this._applyActiveTransitionClasses('leave', oldChildEl)
+                maybeCall(this.props.onLeave, oldChildEl)
+                this._onTransitionsEnd('leave', oldChildEl, this._afterLeaveCallback(oldChildEl))
             }
-        )
+        })
     }
 
     private _afterEnterCallback = (el: HTMLElement) => () => {
@@ -252,8 +269,8 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
     }
 
     private _onTransitionsEnd(type: 'appear' | EnterOrLeave, el: HTMLElement, callback: Function) {
-        if (this.props.duration) {
-            let timeout = window.setTimeout(callback, this.props.duration)
+        if (this.props.duration || this.props.noCss) {
+            let timeout = window.setTimeout(callback, this.props.duration || 0)
             this._timeoutClears[type] = () => window.clearTimeout(timeout)
         } else {
             this._timeoutClears[type] = onAllTransitionsEnd(this.props.type, el, callback)

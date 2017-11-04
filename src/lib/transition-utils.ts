@@ -1,8 +1,8 @@
-function durationStringToMs(s: string) {
+export function durationStringToMs(s: string) {
     return Number(s.slice(0, -1)) * 1000
 }
 
-function totalTransitionDuration(durationString: string, delayString: string) {
+export function totalTransitionDuration(durationString: string, delayString: string) {
     const durations = durationString.split(',')
     let delays = delayString.split(',')
     while (delays.length < durations.length) {
@@ -11,7 +11,7 @@ function totalTransitionDuration(durationString: string, delayString: string) {
     return Math.max(...durations.map((d, i) => durationStringToMs(d) + durationStringToMs(delays[i])))
 }
 
-function getSniffedCssInfo(type: 'animation' | 'transition', el: HTMLElement) {
+export function getSniffedCssInfo(type: 'animation' | 'transition', el: HTMLElement) {
     const { animationDuration, animationDelay, transitionDuration, transitionDelay } = getComputedStyle(el)
     const maxDurations = {
         animation: null as number,

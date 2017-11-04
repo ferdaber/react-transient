@@ -1,0 +1,1 @@
+requestAnimationFrame = (callback: Function) => callback()
