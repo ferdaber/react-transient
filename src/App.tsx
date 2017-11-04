@@ -92,7 +92,7 @@ class App extends React.Component {
                         </div>
                     ))}
                 </TransitionGroup>
-                {/* <div
+                <div
                     style={{
                         display: 'flex',
                         width: '100%',
@@ -109,7 +109,7 @@ class App extends React.Component {
                             ))}
                         </TransitionGroup>
                     </div>
-                </div> */}
+                </div>
             </div>
         )
     }
