@@ -67,6 +67,7 @@ class FadeToggle extends React.Component {
 }
 ```
 ### Advanced slide in-out
+#### [CodeSandbox demo](https://codesandbox.io/s/jjorox62lw?autoresize=1&hidenavigation=1&view=preview)
 ```css
 .btn {
     display: block;
