@@ -121,6 +121,7 @@ export class TransitionGroup extends React.Component<TransitionGroupProps, Trans
                 child.type === Transition ? (
                     React.cloneElement(child, {
                         ...this.strippedProps,
+                        ...child.props,
                         appear: true,
                         key: child.key,
                         ref: (ref: Transition) => (this._refs[child.key] = ref)
