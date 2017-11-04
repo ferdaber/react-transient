@@ -6,40 +6,155 @@ import TransitionWrapper, { WrapperComponent } from './TransitionWrapper'
 import { onAllTransitionsEnd } from './transition-utils'
 import { componentsEqual, maybeCall, noop, onNextFrame } from './utils'
 
-export interface TransitionProps
-    extends Partial<{
-            name: string
-            appear: boolean
-            duration: number
-            type: 'animation' | 'transition'
-            mode: 'in-out' | 'out-in'
-            noCss: boolean
-            component: WrapperComponent
+export interface BaseTransitionProps {
+    /**
+     * Prefix of CSS classes assigned to transitioning elements.
+     * Default value is 't'
+     */
+    name: string
+    /**
+     * If true, element will transition in on first mount
+     */
+    appear: boolean
+    /**
+     * Manual duration of transition, if set it will override
+     * auto-CSS duration detection, this is not used if a done callback
+     * is explicitly used in a JS hook
+     */
+    duration: number
+    /**
+     * Explicit CSS property to sniff, if set and auto-CSS is used
+     * it will only consider the specific property when determining
+     * transition duration
+     */
+    type: 'animation' | 'transition'
+    /**
+     * The transition mode: if unset elements will transition in at the
+     * same time as leaving elements; if 'in-out' entering elements will
+     * transition in prior to leaving elements transitioning out; if 'out-in'
+     * leaving elements will transition out prior to entering elements transitioning in
+     */
+    mode: 'in-out' | 'out-in'
+    /**
+     * If true, auto-CSS detection will be disabled. Make sure to use a duration
+     * or the JS hooks with manual done callback, otherwise elements will transition in/out
+     * within one frame tick
+     */
+    noCss: boolean
+    /**
+     * Only used for React < v16, when rendering multiple children,
+     * the Transition and TransitionGroup components will require a container element,
+     * by default it is a div but can be overriden with this prop. Use a string
+     * for a built-in tag and the function/class for a custom component
+     */
+    component: WrapperComponent
 
-            enterClass: string
-            enteringClass: string
-            enterToClass: string
+    /**
+     * Name of the class for an element that is about to enter.
+     * Applied for a single frame after the element is inserted into the DOM, and styles
+     * are guaranteed to be applied prior to the element being rendered.
+     * Default value is {name}-enter
+     */
+    enterClass: string
+    /**
+     * Name of the class for an element that is entering.
+     * Applied during the entirety of the transition period.
+     * Default value is {name}-entering
+     */
+    enteringClass: string
+    /**
+     * Name of the class for an element that is entering.
+     * Applied right as enterClass is removed, and lasts for the remainder of the
+     * transition period.
+     * Default value is {name}-enter-to
+     */
+    enterToClass: string
 
-            leaveClass: string
-            leavingClass: string
-            leaveToClass: string
+    /**
+     * Name of the class for an element that is about to leave.
+     * Applied for a single frame as the element is about to leave.
+     * Default value is {name}-leave
+     */
+    leaveClass: string
+    /**
+     * Name of the class for an element that is leaving.
+     * Applied during the entirety of the transition period.
+     * Default value is {name}-leaving
+     */
+    leavingClass: string
+    /**
+     * Name of the class for an element that is leaving.
+     * Applied right as leaveClass is removed, and lasts for the remainder of the
+     * transition period.
+     * Default value is {name}-leave-to
+     */
+    leaveToClass: string
 
-            onBeforeAppear(el: HTMLElement): void
-            onAppear(el: HTMLElement, done: () => void): void
-            onAfterAppear(el: HTMLElement): void
-            onCancelAppear(el: HTMLElement): void
+    /**
+     * Called right after an element is inserted into the DOM. All changes are guaranteed
+     * to apply prior to the element being rendered.
+     * Ignored if appear is not set
+     */
+    onBeforeAppear(el: HTMLElement): void
+    /**
+     * Called one frame after onBeforeAppear is emitted
+     * If the provided callback uses a done parameter (two mandatory params), duration
+     * and auto-CSS detection are disabled
+     * Ignored if appear is not set
+     */
+    onAppear(el: HTMLElement, done: () => void): void
+    /**
+     * Called at the end of an element's transition
+     * Ignored if appear is not set
+     */
+    onAfterAppear(el: HTMLElement): void
+    /**
+     * Called if an appearing element is interrupted by another element transitioning in
+     * Ignored if appear is not set
+     */
+    onCancelAppear(el: HTMLElement): void
 
-            onBeforeEnter(el: HTMLElement): void
-            onEnter(el: HTMLElement, done: () => void): void
-            onAfterEnter(el: HTMLElement): void
-            onCancelEnter(el: HTMLElement): void
+    /**
+     * Called right after an element is inserted into the DOM. All changes are guaranteed
+     * to apply prior to the element being rendered.
+     */
+    onBeforeEnter(el: HTMLElement): void
+    /**
+     * Called one frame after onBeforeEnter is emitted
+     * If the provided callback uses a done parameter (two mandatory params), duration
+     * and auto-CSS detection are disabled
+     */
+    onEnter(el: HTMLElement, done: () => void): void
+    /**
+     * Called at the end of an element's transition
+     */
+    onAfterEnter(el: HTMLElement): void
+    /**
+     * Called if an entering element is interrupted by another element transitioning in
+     */
+    onCancelEnter(el: HTMLElement): void
 
-            onBeforeLeave(el: HTMLElement): void
-            onLeave(el: HTMLElement, done: () => void): void
-            onAfterLeave(el: HTMLElement): void
-            onCancelLeave(el: HTMLElement): void
-        }> {}
+    /**
+     * Called right as an element is about to leave
+     */
+    onBeforeLeave(el: HTMLElement): void
+    /**
+     * Called one frame after onBeforeLeave is emitted
+     * If the provided callback uses a done parameter (two mandatory params), duration
+     * and auto-CSS detection are disabled
+     */
+    onLeave(el: HTMLElement, done: () => void): void
+    /**
+     * Called at the end of an element's transition, right before it is about to unmount
+     */
+    onAfterLeave(el: HTMLElement): void
+    /**
+     * Called if a leaving element is interrupted by another element transitioning in
+     */
+    onCancelLeave(el: HTMLElement): void
+}
 
+export interface TransitionProps extends Partial<BaseTransitionProps> {}
 export interface SingleTransitionProps extends TransitionProps {
     children: JSX.Element
 }

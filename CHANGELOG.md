@@ -1,4 +1,7 @@
 # Changelog
+## 0.4.1 - 2017-11-04
+* Added documentation to props API
+
 ## 0.4.0 - 2017-11-04
 * Fixed an issue with Safari not smoothly transitioning elements out in `TransitionGroup`
 * Added `noCss` prop to `Transition` and `TransitionGroup`
