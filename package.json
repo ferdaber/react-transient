@@ -11,12 +11,7 @@
         "type": "git",
         "url": "git+https://github.com/ferdaber/react-transient.git"
     },
-    "keywords": [
-        "react",
-        "transition",
-        "animation",
-        "transient"
-    ],
+    "keywords": ["react", "transition", "animation", "transient"],
     "scripts": {
         "start": "react-scripts-ts start",
         "clean": "rimraf dist && rimraf lib",
@@ -25,11 +20,7 @@
         "build:dist": "webpack --config webpack.config.production.js -p",
         "test": "react-scripts-ts test --env=jsdom"
     },
-    "files": [
-        "src/lib",
-        "dist",
-        "lib"
-    ],
+    "files": ["src/lib/*.ts*", "dist", "lib"],
     "bundleDependencies": false,
     "devDependencies": {
         "@types/jest": "^21.1.5",

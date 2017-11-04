@@ -13,5 +13,6 @@
         "suppressImplicitAnyIndexErrors": true,
         "noUnusedLocals": true
     },
-    "include": ["./src/lib/**/*"]
+    "include": ["./src/lib/**/*"],
+    "exclude": ["**/__tests__/*", "**/__mocks__/*"]
 }
