@@ -1,9 +1,9 @@
-import { onAllTransitionsEnd } from './transition-utils'
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 
-import Transition, { TransitionProps } from './Transition'
-import TransitionWrapper from './TransitionWrapper'
+import { onAllTransitionsEnd } from './transition-utils'
+import { Transition, TransitionProps } from './Transition'
+import { TransitionWrapper } from './TransitionWrapper'
 
 import { insertAtIndex, maybeCall, onNextFrame, noop } from './utils'
 

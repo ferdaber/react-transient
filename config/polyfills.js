@@ -15,4 +15,4 @@ require('whatwg-fetch')
 // It will use the native implementation if it's present and isn't buggy.
 Object.assign = require('object-assign')
 
-window.requestAnimationFrame = callback => setTimeout(() => callback(performance.now()), 0)
+window.requestAnimationFrame = callback => setTimeout(() => callback(Date.now()), 0)

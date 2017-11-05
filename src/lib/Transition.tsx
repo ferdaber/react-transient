@@ -1,7 +1,7 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 
-import TransitionWrapper, { WrapperComponent } from './TransitionWrapper'
+import { TransitionWrapper, WrapperComponent } from './TransitionWrapper'
 
 import { onAllTransitionsEnd } from './transition-utils'
 import { componentsEqual, maybeCall, noop, onNextFrame } from './utils'
@@ -321,7 +321,12 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
             },
             () => {
                 const childEl = this.childRef
-                if (!childEl) return
+                if (!childEl) {
+                    this._safelySetState({
+                        isEntering: false
+                    })
+                    return
+                }
                 this._applyInitialTransitionClasses('enter', childEl)
                 maybeCall(this.props.onBeforeEnter, childEl)
                 onNextFrame(() => {
@@ -339,11 +344,11 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
     }
 
     private _transitionChildOut = () => {
+        const oldChildEl = this.oldChildRef
+        if (!oldChildEl) return
         this._safelySetState({
             isLeaving: true
         })
-        const oldChildEl = this.oldChildRef
-        if (!oldChildEl) return
         this._applyInitialTransitionClasses('leave', oldChildEl)
         maybeCall(this.props.onBeforeLeave, oldChildEl)
         onNextFrame(() => {
@@ -392,6 +397,9 @@ export class Transition extends React.Component<SingleTransitionProps, Transitio
         }
     }
 
+    // TODO: emit cancel events for JS-only transitions?
+    // timeouts are only set for autoCss and duration-based transitions
+    // TODO: remove classes when transitions are interrupted
     private _clearTimeouts() {
         if (this._timeoutClears.appear) {
             this._timeoutClears.appear()

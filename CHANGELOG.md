@@ -1,4 +1,9 @@
 # Changelog
+## 0.4.2 - 2017-11-05
+* Ejected `create-react-app` to set up mocks for Jest
+* Added unit tests (Enzyme is added as a dev dependency)
+* Changed internal imports to use named exports instead of default exports
+
 ## 0.4.1 - 2017-11-04
 * Added documentation to props API
 
