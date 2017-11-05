@@ -1,21 +1,33 @@
 import { TransitionWrapper } from '../TransitionWrapper'
 import * as React from 'react'
-import { shallow } from 'enzyme'
+import { mount } from 'enzyme'
 
-jest.mock('./utils', () => ({
-    canRenderFragments() {
-        return false
+class Foo extends React.Component {
+    render() {
+        return <div>{this.props.children}</div>
     }
-}))
+}
 
 describe('Transition wrapper', () => {
-    it('wraps components in a wrapper div for multiple children', () => {
-        const wrapper = shallow(
+    it('does not wrap components for multiple children', () => {
+        const wrapper = mount(
             <TransitionWrapper>
                 <div>Foo</div>
-                <div>Bar</div>
+                <Foo>Bar</Foo>
             </TransitionWrapper>
         )
-        expect(wrapper.children().type()).toBe('div')
+        expect(wrapper.children().length).toBe(2)
+        expect(
+            wrapper
+                .children()
+                .at(0)
+                .type()
+        ).toBe('div')
+        expect(
+            wrapper
+                .children()
+                .at(1)
+                .type()
+        ).toBe(Foo)
     })
 })
