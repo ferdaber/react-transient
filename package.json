@@ -1,7 +1,7 @@
 {
     "name": "react-transient",
     "author": "Ferdy Budhidharma",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "license": "MIT",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
@@ -11,7 +11,12 @@
         "type": "git",
         "url": "git+https://github.com/ferdaber/react-transient.git"
     },
-    "keywords": ["react", "transition", "animation", "transient"],
+    "keywords": [
+        "react",
+        "transition",
+        "animation",
+        "transient"
+    ],
     "scripts": {
         "start": "node scripts/start.js",
         "clean": "rimraf dist && rimraf lib",
@@ -20,7 +25,11 @@
         "build:dist": "webpack --config webpack.config.production.js -p",
         "test": "node scripts/test.js --env=jsdom"
     },
-    "files": ["src/lib/*.ts*", "dist", "lib"],
+    "files": [
+        "src/lib/*.ts*",
+        "dist",
+        "lib"
+    ],
     "bundleDependencies": false,
     "devDependencies": {
         "@types/enzyme": "^3.1.3",
@@ -67,9 +76,17 @@
     },
     "jest": {
         "mapCoverage": true,
-        "collectCoverageFrom": ["src/**/*.{js,jsx,ts,tsx}"],
-        "setupFiles": ["<rootDir>/config/polyfills.js", "<rootDir>/config/jest/setupTests.js"],
-        "testMatch": ["<rootDir>/src/**/__tests__/**/*.ts?(x)", "<rootDir>/src/**/?(*.)(spec|test).ts?(x)"],
+        "collectCoverageFrom": [
+            "src/**/*.{js,jsx,ts,tsx}"
+        ],
+        "setupFiles": [
+            "<rootDir>/config/polyfills.js",
+            "<rootDir>/config/jest/setupTests.js"
+        ],
+        "testMatch": [
+            "<rootDir>/src/**/__tests__/**/*.ts?(x)",
+            "<rootDir>/src/**/?(*.)(spec|test).ts?(x)"
+        ],
         "testEnvironment": "node",
         "testURL": "http://localhost",
         "transform": {
@@ -77,11 +94,24 @@
             "^.+\\.tsx?$": "<rootDir>/config/jest/typescriptTransform.js",
             "^(?!.*\\.(js|jsx|css|json)$)": "<rootDir>/config/jest/fileTransform.js"
         },
-        "transformIgnorePatterns": ["[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$"],
+        "transformIgnorePatterns": [
+            "[/\\\\]node_modules[/\\\\].+\\.(js|jsx|ts|tsx)$"
+        ],
         "moduleNameMapper": {
             "^react-native$": "react-native-web"
         },
-        "moduleFileExtensions": ["web.ts", "ts", "web.tsx", "tsx", "web.js", "js", "web.jsx", "jsx", "json", "node"],
+        "moduleFileExtensions": [
+            "web.ts",
+            "ts",
+            "web.tsx",
+            "tsx",
+            "web.js",
+            "js",
+            "web.jsx",
+            "jsx",
+            "json",
+            "node"
+        ],
         "globals": {
             "ts-jest": {
                 "tsConfigFile": "/Users/fbudhidharma/dev/github/react-transient/tsconfig.test.json"
@@ -89,7 +119,9 @@
         }
     },
     "babel": {
-        "presets": ["react-app"]
+        "presets": [
+            "react-app"
+        ]
     },
     "eslintConfig": {
         "extends": "react-app"
