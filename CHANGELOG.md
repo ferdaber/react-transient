@@ -1,4 +1,7 @@
 # Changelog
+## 0.4.4 - 2017-11-05
+* More examples, and all are migrated to CodePen
+
 ## 0.4.2 - 2017-11-05
 * Ejected `create-react-app` to set up mocks for Jest
 * Added unit tests (Enzyme is added as a dev dependency)

@@ -34,4 +34,5 @@ Documentation is coming soon! For now, please take a look at the source Typescri
 * [Simultaneous Slide In & Slide Out](https://codepen.io/igrek312/pen/JOKRRY)
 * [Expand In -> Explode Out](https://codepen.io/igrek312/pen/zPBKEG)
 ### Advanced
+* [Filtering with TransitionGroup](https://codepen.io/igrek312/pen/GOqNmz)
 * [Staggered Transition](https://codepen.io/igrek312/pen/OOXRao)

@@ -1,7 +1,7 @@
 {
     "name": "react-transient",
     "author": "Ferdy Budhidharma",
-    "version": "0.4.2",
+    "version": "0.4.4",
     "license": "MIT",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
