@@ -29,6 +29,11 @@ Documentation is coming soon! For now, please take a look at the source Typescri
 * [`Transition`](https://github.com/ferdaber/react-transient/blob/master/src/lib/Transition.tsx)
 * [`TransitionGroup`](https://github.com/ferdaber/react-transient/blob/master/src/lib/TransitionGroup.tsx) (uses the same props as `Transition` with hardcoded `appear` set to `true`)
 ## Examples
+### Demos
+* Transition Modes
+    * [Fade Out -> Fade In](https://codepen.io/igrek312/pen/dZXpXp)
+    * [Simultaneous Slide In & Slide Out](https://codepen.io/igrek312/pen/JOKRRY)
+    * [Expand In -> Explode Out](https://codepen.io/igrek312/pen/zPBKEG)
 ### Fading in and out
 ```css
 .toggle-enter,
@@ -67,7 +72,6 @@ class FadeToggle extends React.Component {
 }
 ```
 ### Advanced slide in-out
-#### [CodeSandbox demo](https://codesandbox.io/s/jjorox62lw?autoresize=1&hidenavigation=1&view=preview)
 ```css
 .btn {
     display: block;
