@@ -30,10 +30,12 @@ Documentation is coming soon! For now, please take a look at the source Typescri
 * [`TransitionGroup`](https://github.com/ferdaber/react-transient/blob/master/src/lib/TransitionGroup.tsx) (uses the same props as `Transition` with hardcoded `appear` set to `true`)
 ## Examples
 ### Demos
-* Transition Modes
+* __Transition Modes__
     * [Fade Out -> Fade In](https://codepen.io/igrek312/pen/dZXpXp)
     * [Simultaneous Slide In & Slide Out](https://codepen.io/igrek312/pen/JOKRRY)
     * [Expand In -> Explode Out](https://codepen.io/igrek312/pen/zPBKEG)
+* __Advanced__
+    * [Staggered Transition](https://codepen.io/igrek312/pen/OOXRao)
 ### Fading in and out
 ```css
 .toggle-enter,
